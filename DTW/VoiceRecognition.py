@@ -27,33 +27,55 @@ RATE = 16000         # 采样频率 8000 or 16000
 RECORD_SECONDS = 2.5 # 录音时长 单位 秒(s)
 
 # 读取已经用 HTK 计算好的 MFCC 特征
-def getMFCC() :
+# def getMFCC() :
+#     MFCC = []
+#     for i in range(10) :
+#         MFCC_rows = []
+#         for j in range(6) :
+#             f = open("./MFCC-EndPointedVoice/" + str(i + 1) + "-" + str(j + 1) + ".mfc","rb")
+#             nframes = unpack(">i", f.read(4))[0]
+#             frate = unpack(">i", f.read(4))[0]     # 100 ns 内的
+#             nbytes = unpack(">h", f.read(2))[0]    # 特征的字节数
+#             feakind = unpack(">h", f.read(2))[0]
+#             ndim = nbytes / 4   # 维数
+#             feature = []
+#             for m in range(nframes) :
+#                 feature_frame = []
+#                 for n in range(int(ndim)) :
+#                     feature_frame.append(unpack(">f", f.read(4))[0])
+#                 feature.append(feature_frame)
+#             f.close()
+#             MFCC_rows.append(feature)
+#         MFCC.append(MFCC_rows)
+#     return MFCC
+def getMFCC():
     MFCC = []
-    for i in range(10) :
+    for i in range(10):
         MFCC_rows = []
-        for j in range(6) :
-            f = open("./MFCC-EndPointedVoice/" + str(i + 1) + "-" + str(j + 1) + ".mfc","rb")
-            nframes = unpack(">i", f.read(4))[0] 
-            frate = unpack(">i", f.read(4))[0]     # 100 ns 内的
-            nbytes = unpack(">h", f.read(2))[0]    # 特征的字节数
-            feakind = unpack(">h", f.read(2))[0]
-            ndim = nbytes / 4   # 维数
+        for j in range(6):
+            f = open("./MFCC-EndPointedVoice/" + str(i + 1) + "-" + str(j + 1) + ".mfc", "rb")
+            nframes = int(unpack(">i", f.read(4))[0])
+            frate = int(unpack(">i", f.read(4))[0])     # 100 ns 内的
+            nbytes = int(unpack(">h", f.read(2))[0])    # 特征的字节数
+            feakind = int(unpack(">h", f.read(2))[0])
+            ndim = int(nbytes / 4)   # 维数
             feature = []
-            for m in range(nframes) :
+            for m in range(nframes):
                 feature_frame = []
-                for n in range(int(ndim)) :
-                    feature_frame.append(unpack(">f", f.read(4))[0])
+                for n in range(ndim):
+                    feature_frame.append(int(unpack(">f", f.read(4))[0]))
                 feature.append(feature_frame)
             f.close()
             MFCC_rows.append(feature)
         MFCC.append(MFCC_rows)
     return MFCC
 
+
 # 取出其中的模板命令的 MFCC 特征 
 def getMFCCModels(MFCC) :
     MFCC_models = []
     for i in range(len(MFCC)) :         #第二个模板
-        MFCC_models.append(MFCC[i][3])
+        MFCC_models.append(MFCC[i][4])
     for i in range(len(MFCC)) :        #第一个模板
         MFCC_models.append(MFCC[i][0])
     return MFCC_models
@@ -63,7 +85,7 @@ def getMFCCUndetermined(MFCC) :
     MFCC_undetermined = []
     for i in range(len(MFCC)) :
         # for j in range(6, len(MFCC[i])) :
-        for j in [1,2,4,5] :        
+        for j in [1,2,3,5] :
             MFCC_undetermined.append(MFCC[i][j])
     return MFCC_undetermined
 
@@ -141,21 +163,21 @@ MFCC_models = getMFCCModels(MFCC)
 # 取出其中的待分类语音的 MFCC 特征
 MFCC_undetermined = getMFCCUndetermined(MFCC)
 
-# # 开始匹配
-# n = 0
-# print('测试样本  '+'实际命令号 '+'测试结果')*
-# for i in range(len(MFCC_undetermined)) : #len(MFCC_undetermined)
-#     flag = 0
-#     min_dis = dtw(MFCC_undetermined[i], MFCC_models[0])
-#     for j in range(1, len(MFCC_models)) :
-#         dis = dtw(MFCC_undetermined[i], MFCC_models[j])
-#         if dis < min_dis :
-#             min_dis = dis
-#             flag = j%10
-#     if i + 1 <= (flag + 1) * 4 and i + 1 >= flag * 4 : #对比是否匹配，2表示的是条命令有2个测试语音
-#         n = n + 1
-#     print('第'+str((i)%4+1)+'组：' +"\t\t"+str((i)//4+1)+ "\t" + str(flag + 1) )
-# print("正确率为：" + str(n / 40))
+# 开始匹配
+n = 0
+print('测试样本  '+'实际命令号 '+'测试结果')
+for i in range(len(MFCC_undetermined)) : #len(MFCC_undetermined)
+    flag = 0
+    min_dis = dtw(MFCC_undetermined[i], MFCC_models[0])
+    for j in range(1, len(MFCC_models)) :
+        dis = dtw(MFCC_undetermined[i], MFCC_models[j])
+        if dis < min_dis :
+            min_dis = dis
+            flag = j%10
+    if i + 1 <= (flag + 1) * 4 and i + 1 >= flag * 4 : #对比是否匹配，2表示的是条命令有2个测试语音
+        n = n + 1
+    print('第'+str((i)%4+1)+'组：' +"\t\t"+str((i)//4+1)+ "\t" + str(flag + 1) + "\t"+ min_dis.__str__())
+print("正确率为：" + str(n / 40))
 
 # -------------------此处开始进行GUI界面显示以及录音识别-----------------
 class GUI(Login):
@@ -200,9 +222,9 @@ class GUI(Login):
             m = m + 2
 
         # 利用 HCopy 工具对录取的语音进行 MFCC 特征提取
-        os.chdir("D:\\Programming\\Git_Repository\\Language_Recognition_System\\DTW\\HTK-RealTimeRecordedVoice")
+        os.chdir("E:\GitHub\Language-Recognition-System\\DTW\\HTK-RealTimeRecordedVoice")
         os.system("hcopy -A -D -T 1 -C tr_wav.cfg -S .\list.scp")
-        os.chdir("D:\\Programming\\Git_Repository\\Language_Recognition_System\\DTW")
+        os.chdir("E:\GitHub\Language-Recognition-System\\DTW")
 
         # 对录好的语音进行匹配
         MFCC_recorded = getMFCCRecorded()
@@ -241,12 +263,12 @@ class GUI(Login):
         else:
             self.output_result.insert(0 ,'请重新录入语音')
                 
-# 初始化对象  
-L = GUI()  
-# 进行布局  
-L.gui_arrang()
-# 主程序执行  
-tkinter.mainloop()  
+# # 初始化对象
+# L = GUI()
+# # 进行布局
+# L.gui_arrang()
+# # 主程序执行
+# tkinter.mainloop()
 
 
 
